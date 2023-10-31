@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Miei Pokémon</title>
+    <!-- Include i link forniti per DaisyUI e Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+<body>
+<div class="navbar bg-neutral text-neutral-content">
+    <a href="index.html" class="btn btn-ghost normal-case text-xl">Tutti i Pokémon</a>
+</div>
+<div id="myPokemonList" class="grid grid-cols-4 gap-4">
+    <!-- I Pokémon verranno aggiunti qui -->
+</div>
+<script>
+    // Recupera la lista di Pokémon dal localStorage
+    const myPokemons = JSON.parse(localStorage.getItem("myPokemons")) || [];
+
+    function saveMyPokemons() {
+        localStorage.setItem("myPokemons", JSON.stringify(myPokemons));
+    }
+
+    function updateMyPokemonsPage() {
+        const myPokemonsPage = document.querySelector("#myPokemonsPage");
+        if (myPokemonsPage) {
+            myPokemonsPage.remove();
+        }
+
+        viewMyPokemons();
+    }
+
+    function viewMyPokemons() {
+        location.reload();
+    }
+
+    // Funzione per caricare e visualizzare i Pokémon
+    function loadMyPokemons() {
+        const myPokemonList = document.getElementById("myPokemonList");
+
+        myPokemons.forEach(pokemonName => {
+            // Esegui un fetch per ottenere i dettagli del Pokémon
+            fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Chiamata per ottenere i dettagli aggiuntivi
+                    fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemonName}`)
+                        .then(speciesResponse => speciesResponse.json())
+                        .then(speciesData => {
+                            createPokemonCard(data, speciesData);
+                        })
+                        .catch(error => {
+                            console.error("Errore nel caricamento dei Pokémon: ", error);
+                        });
+                })
+                .catch(error => {
+                    console.error("Errore nel caricamento dei Pokémon: ", error);
+                });
+        });
+
+        function removeFromMyPokemons(pokemonName) {
+            const index = myPokemons.indexOf(pokemonName);
+            if (index !== -1) {
+                myPokemons.splice(index, 1);
+                saveMyPokemons(); // Salva la collezione aggiornata in localStorage
+                updateMyPokemonsPage();
+            }
+            // Rimuovi la scheda del Pokémon dall'interfaccia utente
+            const cardToRemove = document.querySelector(`.pokemon-card[data-name="${pokemonName}"]`);
+            if (cardToRemove) {
+                cardToRemove.remove();
+            }
+        }
+
+        // Funzione per creare una scheda per il Pokémon
+        function createPokemonCard(pokemon, speciesData) {
+            const card = document.createElement("div");
+            card.classList.add("pokemon-card", "card", "w-96", "bg-base-100", "shadow-xl");
+
+            const image = document.createElement("img");
+            image.src = pokemon.sprites.front_default;
+            image.alt = "Pokémon";
+
+            const cardBody = document.createElement("div");
+            cardBody.classList.add("card-body");
+
+            const name = document.createElement("h2");
+            name.classList.add("card-title");
+            name.textContent = pokemon.name;
+
+            const abilitiesElement = document.createElement("p");
+            abilitiesElement.textContent = 'Abilità del Pokémon: ' + pokemon.abilities.map(ability => ability.ability.name).join(', ');
+
+            const heightElement = document.createElement("p");
+            heightElement.textContent = 'Altezza:' + (pokemon.height / 10) + ' m';
+
+            const weightElement = document.createElement("p");
+            weightElement.textContent = 'Peso: ' + (pokemon.weight / 10) + ' kg';
+
+            const itemsElement = document.createElement("p");
+            itemsElement.textContent = 'Oggetti: ' + speciesData.flavor_text_entries[0].flavor_text;
+            console.log(itemsElement.textContent);
+
+            const removeButton = document.createElement("button");
+            removeButton.classList.add("btn", "btn-danger", "btn-error");
+            removeButton.textContent = "Rimuovi";
+            removeButton.addEventListener("click", () => {
+                removeFromMyPokemons(pokemon.name);
+                location.reload();
+            });
+
+            // Aggiungi gli elementi alla card
+            cardBody.appendChild(name);
+            cardBody.appendChild(abilitiesElement);
+            cardBody.appendChild(heightElement);
+            cardBody.appendChild(weightElement);
+            cardBody.appendChild(itemsElement);
+
+            card.appendChild(image);
+            card.appendChild(cardBody);
+            card.appendChild(removeButton);
+
+            myPokemonList.appendChild(card);
+        }
+    }
+
+    // Carica e visualizza i Pokémon
+    loadMyPokemons();
+</script>
+</body>
+</html>

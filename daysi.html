@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Pokémon Desk</title>
+    <!-- Aggiungi i link forniti per DaisyUI e Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.3/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Aggiungi uno stile personalizzato per la card se necessario */
+        .pokemon-card {
+            width: 20rem;
+        }
+    </style>
+</head>
+<body>
+
+<div id="pokidesk" class="grid grid-cols-4 gap-4">
+    <!-- Card dei Pokémon verranno aggiunte qui -->
+</div>
+<button id="loadMore" class="btn btn-primary">Carica Altri Pokémon</button>
+
+<!-- Dialog per visualizzare le caratteristiche del Pokémon -->
+<div id="pokemonDetails" class="fixed inset-0 z-50 max-w-sm hidden">
+    <div class="bg-white shadow-lg rounded-lg p-4 mx-4 my-8 ">
+        <h2 class="text-2xl mb-2" id="pokemonName">Nome del Pokémon</h2>
+        <img src="" alt="Pokémon" id="pokemonImage" class="w-32 mx-auto mb-4" />
+        <p id="pokemonAbilities">Abilità del Pokémon: <span id="abilities"></span></p>
+        <button id="closeDialog" class="btn btn-secondary">Chiudi</button>
+    </div>
+</div>
+
+<!-- Bottone per visualizzare i Miei Pokémon -->
+<button class="btn btn-primary" onclick="viewMyPokemons()">Visualizza i Miei Pokémon</button>
+
+<!-- Contenitore per la pagina dei tuoi Pokémon -->
+<div id="myPokemonsPage"></div>
+
+<script>
+    const pokidesk = document.getElementById("pokidesk");
+    const loadMoreButton = document.getElementById("loadMore");
+    const pokemonDetailsDialog = document.getElementById("pokemonDetails");
+    const pokemonNameElement = document.getElementById("pokemonName");
+    const pokemonImageElement = document.getElementById("pokemonImage");
+    const abilitiesElement = document.getElementById("abilities");
+    const closeDialogButton = document.getElementById("closeDialog");
+
+    let nextUrl = "https://pokeapi.co/api/v2/pokemon?offset=0&limit=20"; // L'URL iniziale
+
+    loadMoreButton.addEventListener("click", loadMorePokemons);
+    closeDialogButton.addEventListener("click", closePokemonDetailsDialog);
+
+    const myPokemons = [];
+
+    // Funzione per caricare i Pokémon
+    function loadMorePokemons() {
+        fetch(nextUrl)
+            .then(response => response.json())
+            .then(data => {
+                nextUrl = data.next; // Aggiorna l'URL successivo
+                const results = data.results;
+
+                results.forEach(pokemon => {
+                    createPokemonCard(pokemon);
+                });
+            })
+            .catch(error => {
+                console.error("Errore nel caricamento dei Pokémon: ", error);
+            });
+    }
+
+    // Funzione per creare una scheda per il Pokémon
+    function createPokemonCard(pokemon) {
+        const card = document.createElement("div");
+        card.classList.add("pokemon-card", "card", "w-96", "bg-base-100", "shadow-xl");
+
+        const image = document.createElement("img");
+        fetchPokemonImage(pokemon.url, image); // Carica l'immagine e la assegna all'elemento img
+        image.alt = "Pokémon";
+
+        const cardBody = document.createElement("div");
+        cardBody.classList.add("card-body");
+
+        const name = document.createElement("h2");
+        name.classList.add("card-title");
+        name.textContent = pokemon.name;
+
+        const detailsButton = document.createElement("button");
+        detailsButton.classList.add("btn", "btn-primary");
+        detailsButton.textContent = "Visualizza Caratteristiche";
+        detailsButton.addEventListener("click", () => {
+            // Recupera e visualizza le caratteristiche del Pokémon
+            fetchPokemonDetails(pokemon);
+        });
+
+        const addToMyPokemonsButton = document.createElement("button");
+        addToMyPokemonsButton.classList.add("btn", "btn-success");
+        addToMyPokemonsButton.textContent = "Aggiungi ai Miei Pokémon";
+        addToMyPokemonsButton.addEventListener("click", () => {
+            addToMyPokemons(pokemon.name);
+        });
+
+        // Aggiungi gli elementi alla card
+        cardBody.appendChild(name);
+        cardBody.appendChild(detailsButton);
+        cardBody.appendChild(addToMyPokemonsButton);
+
+        card.appendChild(image);
+        card.appendChild(cardBody);
+
+        pokidesk.appendChild(card);
+    }
+
+    // Funzione per chiudere il dialog delle caratteristiche del Pokémon
+    function closePokemonDetailsDialog() {
+        pokemonDetailsDialog.classList.add("hidden");
+    }
+
+    function fetchPokemonDetails(pokemon) {
+        fetch(pokemon.url)
+            .then(response => response.json())
+            .then(data => {
+                // Visualizza le caratteristiche del Pokémon nel dialog
+                showPokemonDetails(data);
+            })
+            .catch(error => {
+                console.error("Errore nel caricamento delle caratteristiche del Pokémon: ", error);
+            });
+    }
+
+    // Funzione per visualizzare le caratteristiche del Pokémon
+    function showPokemonDetails(pokemon) {
+        pokemonNameElement.textContent = pokemon.name;
+        pokemonImageElement.src = pokemon.sprites.front_default;
+        abilitiesElement.textContent = 'Abilità: ' + pokemon.abilities.map(ability => ability.ability.name).join(', ');
+
+        // Visualizza il dialog
+        pokemonDetailsDialog.classList.remove("hidden");
+    }
+
+    //Trova l'immagine
+    function fetchPokemonImage(url, imageElement) {
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Cattura l'URL dell'immagine e assegnalo all'elemento img
+                if (data.sprites && data.sprites.front_default) {
+                    imageElement.src = data.sprites.front_default;
+                } else {
+                    console.error("Nessuna immagine disponibile per questo Pokémon.");
+                }
+            })
+            .catch(error => {
+                console.error("Errore nel caricamento dell'immagine del Pokémon: ", error);
+            });
+    }
+
+    // Funzione per visualizzare i tuoi Pokémon
+    function viewMyPokemons() {
+        const myPokemonsPage = document.createElement("div");
+        myPokemonsPage.id = "myPokemonsPage";
+        myPokemonsPage.innerHTML = "<h1>I Miei Pokémon</h1>";
+
+        if (myPokemons.length === 0) {
+            myPokemonsPage.innerHTML += "<p>Non hai ancora Pokémon nella tua collezione.</p>";
+        } else {
+            myPokemons.forEach(pokemonName => {
+                myPokemonsPage.innerHTML += `<p>${pokemonName} <button class="btn btn-danger" onclick="removeFromMyPokemons('${pokemonName}')">Rimuovi</button></p>`;
+            });
+        }
+
+        document.body.appendChild(myPokemonsPage);
+    }
+
+    // Funzione per rimuovere un Pokémon dalla tua collezione
+    function removeFromMyPokemons(pokemonName) {
+        const index = myPokemons.indexOf(pokemonName);
+        if (index !== -1) {
+            myPokemons.splice(index, 1);
+            updateMyPokemonsPage(); // Aggiorna la pagina dei tuoi Pokémon
+        }
+    }
+
+    // Funzione per aggiungere un Pokémon alla tua collezione
+    function addToMyPokemons(pokemonName) {
+        if (!myPokemons.includes(pokemonName)) {
+            myPokemons.push(pokemonName);
+            updateMyPokemonsPage(); // Aggiorna la pagina dei tuoi Pokémon
+        } else {
+            alert("Questo Pokémon è già nella tua collezione.");
+        }
+    }
+
+    // Funzione per aggiornare la pagina dei tuoi Pokémon
+    function updateMyPokemonsPage() {
+        const myPokemonsPage = document.querySelector("#myPokemonsPage");
+        if (myPokemonsPage) {
+            myPokemonsPage.remove();
+        }
+
+        viewMyPokemons();
+    }
+
+    // Carica i primi Pokémon
+    loadMorePokemons();
+</script>
+</body>
+</html>
